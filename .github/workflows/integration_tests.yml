@@ -430,8 +430,6 @@ jobs:
           cd test/go-tests
           mkdir test-reports
           gotestsum --junitfile test-reports/test-log-ingestion.xml -- -run LogIngestion,LogForwarding,SequenceState -v
-#          gotestsum --junitfile test-reports/test-log-forwarding.xml -- -run LogForwarding -v
-#          gotestsum --junitfile test-reports/test-sequence-state.xml -- -run SequenceState -v
           gotestsum --junitfile test-reports/test-sequence-loop.xml -- -run SequenceLoopIntegrationTest -v
           gotestsum --junitfile test-reports/test-self-healing.xml -- -run Test_SelfHealing -v
           gotestsum --junitfile test-reports/test-manage-secrets.xml -- -run ManageSecrets -v
