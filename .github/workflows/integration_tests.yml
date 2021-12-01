@@ -429,18 +429,7 @@ jobs:
         run: |
           cd test/go-tests
           mkdir test-reports
-          gotestsum --junitfile test-reports/test-log-ingestion.xml -- -run \
-            LogIngestion,\
-            LogForwarding,\
-            SequenceState,\
-            SequenceLoopIntegrationTest,\
-            Test_SelfHealing,\
-            ManageSecrets,\
-            Test_Webhook,\
-            SequenceTimeout,\
-            SequenceControl,\
-            SequenceQueue \
-            -v -timeout 15m
+          gotestsum --junitfile test-reports/test-common.xml -- ./common -v -timeout 15m
 
       - name: Upload XML test reports as artifact
         if: always()
