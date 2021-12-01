@@ -429,14 +429,18 @@ jobs:
         run: |
           cd test/go-tests
           mkdir test-reports
-          gotestsum --junitfile test-reports/test-log-ingestion.xml -- -run LogIngestion,LogForwarding,SequenceState -v
-          gotestsum --junitfile test-reports/test-sequence-loop.xml -- -run SequenceLoopIntegrationTest -v
-          gotestsum --junitfile test-reports/test-self-healing.xml -- -run Test_SelfHealing -v
-          gotestsum --junitfile test-reports/test-manage-secrets.xml -- -run ManageSecrets -v
-          gotestsum --junitfile test-reports/test-webhook-service.xml -- -run Test_Webhook -v
-          gotestsum --junitfile test-reports/test-sequence-timeout.xml -- -run SequenceTimeout -v
-          gotestsum --junitfile test-reports/test-sequence-control.xml -- -run SequenceControl -v
-          gotestsum --junitfile test-reports/test-sequence-queue.xml -- -run SequenceQueue -v -timeout 15m
+          gotestsum --junitfile test-reports/test-log-ingestion.xml -- -run \
+            LogIngestion,\
+            LogForwarding,\
+            SequenceState,\
+            SequenceLoopIntegrationTest,\
+            Test_SelfHealing,\
+            ManageSecrets,\
+            Test_Webhook,\
+            SequenceTimeout,\
+            SequenceControl,\
+            SequenceQueue \
+            -v -timeout 15m
 
       - name: Upload XML test reports as artifact
         if: always()
