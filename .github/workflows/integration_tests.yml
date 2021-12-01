@@ -429,13 +429,13 @@ jobs:
         run: |
           cd test/go-tests
           mkdir test-reports
-          gotestsum --junitfile test-reports/test-common.xml -- ./common -v -timeout 15m
+          gotestsum --jsonfile test-reports/test-common.log -- ./common -v -timeout 15m
 
       - name: Upload XML test reports as artifact
         if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: test-report-junit
+          name: test-report-json
           path: test/go-tests/test-reports/test-*.xml
 
       #######################################################################
@@ -519,7 +519,7 @@ jobs:
       - name: Download test reports
         uses: actions/download-artifact@v2
         with:
-          path: test-report-junit
+          path: test-report-json
 
       - name: Publish Test Results
         uses: EnricoMi/publish-unit-test-result-action@v1
