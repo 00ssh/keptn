@@ -423,6 +423,7 @@ jobs:
         id: test_aggregated
         if: env.RUN_AIRGAPPED_TEST != 'true'
         continue-on-error: true
+        timeout-minutes: 30
         env:
           KEPTN_ENDPOINT: ${{ steps.authenticate_keptn_cli.outputs.KEPTN_ENDPOINT }}
           UNLEASH_SERVICE_VERSION: "release-0.3.2"
@@ -431,7 +432,7 @@ jobs:
         run: |
           cd test/go-tests
           mkdir test-reports
-          gotestsum --jsonfile $TEST_REPORT_FOLDER/${{ env.TEST_REPORT_FILENAME }} -- ./common -v -timeout 15m
+          gotestsum --jsonfile $TEST_REPORT_FOLDER/${{ env.TEST_REPORT_FILENAME }} -- ./common -v -timeout 30m
           cd "$TEST_REPORT_FOLDER"
           test_report=$(cat "${{ env.TEST_REPORT_FILENAME }}")
           filtered_test_report=$(
