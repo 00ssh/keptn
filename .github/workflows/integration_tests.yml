@@ -464,7 +464,7 @@ jobs:
           kubectl delete namespace keptn-jmeter-service
 
       - name: Uninstall Istio
-        if: env.CLOUD_PROVIDER != 'minishift-on-GHA' # istio was not installed on minishfit, so no need to uninstall
+        if: env.CLOUD_PROVIDER != 'minishift-on-GHA' # istio was not installed on minishift, so no need to uninstall it
         timeout-minutes: 5
         run: test/utils/uninstall_istio.sh
 
@@ -495,7 +495,27 @@ jobs:
         run: |
           echo "write test report to $TEST_REPORT_FILENAME"
           # please check with headings in print_test_report task roughly 50 lines below
-          echo "| ${{ matrix.PLATFORM }}/${{ matrix.CLOUD_PROVIDER}} ${{ matrix.PLATFORM_VERSION }} | ${{ steps.keptn_install.outcome }} | ${{ steps.authenticate_keptn_cli.outcome }} | ${{ steps.test_airgapped_images.outcome }} | ${{ steps.test_log_ingestion.outcome }} | ${{ steps.test_log_forwarding.outcome }} | ${{ steps.test_sequence_states.outcome }} | ${{ steps.test_sequence_timeout.outcome }} | ${{ steps.test_sequence_control.outcome }} | ${{ steps.test_sequence_queue.outcome }} | ${{ steps.test_sequence_loop.outcome }} | ${{ steps.test_quality_gates.outcome }} | ${{ steps.test_self_healing.outcome }} | ${{ steps.test_delivery_assistant.outcome }} | ${{ steps.test_backup_restore.outcome }} | ${{ steps.test_user_managed_delivery.outcome }} | ${{ steps.test_continuous_delivery.outcome }} | ${{ steps.test_continuous_delivery_remote_exec.outcome }} | ${{ steps.test_manage_secrets.outcome }} | ${{ steps.test_webhook_integration.outcome }} | ${{ steps.test_uniform_registration.outcome }} |" > $TEST_REPORT_FILENAME
+          echo "| ${{ matrix.PLATFORM }}/${{ matrix.CLOUD_PROVIDER}} ${{ matrix.PLATFORM_VERSION }} | " \
+            "${{ steps.keptn_install.outcome }} | " \
+            "${{ steps.authenticate_keptn_cli.outcome }} | " \
+            "${{ steps.test_airgapped_images.outcome }} | " \
+            "${{ steps.test_log_ingestion.outcome }} | " \
+            "${{ steps.test_log_forwarding.outcome }} | " \
+            "${{ steps.test_sequence_states.outcome }} | " \
+            "${{ steps.test_sequence_timeout.outcome }} | " \
+            "${{ steps.test_sequence_control.outcome }} | " \
+            "${{ steps.test_sequence_queue.outcome }} | " \
+            "${{ steps.test_sequence_loop.outcome }} | " \
+            "${{ steps.test_quality_gates.outcome }} | " \
+            "${{ steps.test_self_healing.outcome }} | " \
+            "${{ steps.test_delivery_assistant.outcome }} | " \
+            "${{ steps.test_backup_restore.outcome }} | " \
+            "${{ steps.test_user_managed_delivery.outcome }} | " \
+            "${{ steps.test_continuous_delivery.outcome }} | " \
+            "${{ steps.test_continuous_delivery_remote_exec.outcome }} | " \
+            "${{ steps.test_manage_secrets.outcome }} | " \
+            "${{ steps.test_webhook_integration.outcome }} | " \
+            "${{ steps.test_uniform_registration.outcome }} |" > $TEST_REPORT_FILENAME
           cat $TEST_REPORT_FILENAME
 
       - name: Upload test report as an artifact
