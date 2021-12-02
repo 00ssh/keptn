@@ -52,6 +52,7 @@ jobs:
       KEPTN_EXAMPLES_BRANCH: ${{ github.event.inputs.examples_branch }}
       COLLECT_RESOURCE_LIMITS: ${{ matrix.COLLECT_RESOURCE_LIMITS }}
       GO_VERSION: ^1.16
+      TEST_REPORT_FILENAME: test-report-${{ github.run_id }}-${{ matrix.PLATFORM }}-${{ matrix.CLOUD_PROVIDER}}-${{ matrix.PLATFORM_VERSION }}.log
     outputs:
       BRANCH: ${{ steps.determine_branch.outputs.BRANCH }}
       ARTIFACT_RUN_ID: ${{ steps.last_run_id.outputs.RUN_ID }}
@@ -426,17 +427,18 @@ jobs:
           KEPTN_ENDPOINT: ${{ steps.authenticate_keptn_cli.outputs.KEPTN_ENDPOINT }}
           UNLEASH_SERVICE_VERSION: "release-0.3.2"
           GOTESTSUM_FORMAT: "testname"
+          TEST_REPORT_FOLDER: "test-reports"
         run: |
           cd test/go-tests
           mkdir test-reports
-          gotestsum --jsonfile test-reports/test-common.log -- ./common -v -timeout 15m
-
-      - name: Upload XML test reports as artifact
-        if: always()
-        uses: actions/upload-artifact@v2
-        with:
-          name: test-report-json
-          path: test/go-tests/test-reports/test-*.xml
+          gotestsum --jsonfile $TEST_REPORT_FOLDER/${{ env.TEST_REPORT_FILENAME }} -- ./common -v -timeout 15m
+          cd "$TEST_REPORT_FOLDER"
+          test_report=$(cat "${{ env.TEST_REPORT_FILENAME }}")
+          filtered_test_report=$(
+            cat "${{ env.TEST_REPORT_FILENAME }}" | \
+            jq -c 'select( .Action == "pass" or .Action == "fail" or (.Action == "skip" and .Test != null) ) | {test: .Test, outcome: .Action}'
+          )
+          echo "$filtered_test_report" > "${{ env.TEST_REPORT_FILENAME }}"
 
       #######################################################################
       # TEARDOWN
@@ -491,39 +493,40 @@ jobs:
         id: write_test_report
         if: always()
         env:
-          TEST_REPORT_FILENAME: test-report-${{ github.run_id }}-${{ matrix.PLATFORM }}-${{ matrix.CLOUD_PROVIDER}}-${{ matrix.PLATFORM_VERSION }}.txt
+          TEST_REPORT_FILENAME: test/go-tests/test-reports/${{ env.TEST_REPORT_FILENAME }}
         run: |
           echo "write test report to $TEST_REPORT_FILENAME"
-          # please check with headings in print_test_report task roughly 50 lines below
-          echo "| ${{ matrix.PLATFORM }}/${{ matrix.CLOUD_PROVIDER}} ${{ matrix.PLATFORM_VERSION }} | " \
-            "${{ steps.keptn_install.outcome }} | " \
-            "${{ steps.authenticate_keptn_cli.outcome }} | " \
-            "${{ steps.test_airgapped_images.outcome }} | " \
-            "${{ steps.test_log_ingestion.outcome }} | " \
-            "${{ steps.test_log_forwarding.outcome }} | " \
-            "${{ steps.test_sequence_states.outcome }} | " \
-            "${{ steps.test_sequence_timeout.outcome }} | " \
-            "${{ steps.test_sequence_control.outcome }} | " \
-            "${{ steps.test_sequence_queue.outcome }} | " \
-            "${{ steps.test_sequence_loop.outcome }} | " \
-            "${{ steps.test_quality_gates.outcome }} | " \
-            "${{ steps.test_self_healing.outcome }} | " \
-            "${{ steps.test_delivery_assistant.outcome }} | " \
-            "${{ steps.test_backup_restore.outcome }} | " \
-            "${{ steps.test_user_managed_delivery.outcome }} | " \
-            "${{ steps.test_continuous_delivery.outcome }} | " \
-            "${{ steps.test_continuous_delivery_remote_exec.outcome }} | " \
-            "${{ steps.test_manage_secrets.outcome }} | " \
-            "${{ steps.test_webhook_integration.outcome }} | " \
-            "${{ steps.test_uniform_registration.outcome }} |" > $TEST_REPORT_FILENAME
+          report_template='{"test":$test_name, "outcome":$test_outcome}'
+
+          log_line1=$(jq -j -n --arg test_name "Keptn Install" --arg test_outcome "${{ steps.keptn_install.outcome }}" "$report_template")
+          log_line2=$(jq -j -n --arg test_name "Keptn Auth" --arg test_outcome "${{ steps.authenticate_keptn_cli.outcome }}" "$report_template")
+          log_line3=$(jq -j -n --arg test_name "Airgapped Images" --arg test_outcome "${{ steps.test_airgapped_images.outcome }}" "$report_template")
+          log_line4=$(jq -j -n --arg test_name "QG Standalone" --arg test_outcome "${{ steps.test_quality_gates.outcome }}" "$report_template")
+          log_line5=$(jq -j -n --arg test_name "Del-Assist" --arg test_outcome "${{ steps.test_delivery_assistant.outcome }}" "$report_template")
+          log_line6=$(jq -j -n --arg test_name "Backup-Restore" --arg test_outcome "${{ steps.test_backup_restore.outcome }}" "$report_template")
+          log_line7=$(jq -j -n --arg test_name "User-Man. Depl." --arg test_outcome "${{ steps.test_user_managed_delivery.outcome }}" "$report_template")
+          log_line8=$(jq -j -n --arg test_name "Cont Deliv" --arg test_outcome "${{ steps.test_continuous_delivery.outcome }}" "$report_template")
+          log_line9=$(jq -j -n --arg test_name "Cont Deliv (Remote Exec)" --arg test_outcome "${{ steps.test_continuous_delivery_remote_exec.outcome }}" "$report_template")
+          log_line10=$(jq -j -n --arg test_name "Uniform Registration" --arg test_outcome "${{ steps.test_uniform_registration.outcome }}" "$report_template")
+
+          echo "$log_line1" >> $TEST_REPORT_FILENAME
+          echo "$log_line2" >> $TEST_REPORT_FILENAME
+          echo "$log_line3" >> $TEST_REPORT_FILENAME
+          echo "$log_line4" >> $TEST_REPORT_FILENAME
+          echo "$log_line5" >> $TEST_REPORT_FILENAME
+          echo "$log_line6" >> $TEST_REPORT_FILENAME
+          echo "$log_line7" >> $TEST_REPORT_FILENAME
+          echo "$log_line8" >> $TEST_REPORT_FILENAME
+          echo "$log_line9" >> $TEST_REPORT_FILENAME
+          echo "$log_line10" >> $TEST_REPORT_FILENAME
           cat $TEST_REPORT_FILENAME
 
-      - name: Upload test report as an artifact
+      - name: Upload JSON test report as artifact
         if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: test-report
-          path: test-*.txt
+          name: test-report-json
+          path: test/go-tests/test-reports/test-*.log
 
       - name: Upload support archive as an artifact
         if: always()
