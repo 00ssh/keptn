@@ -532,19 +532,132 @@ jobs:
           name: support-archive
           path: support-archive/*.zip
 
-  publish-test-report:
-    runs-on: ubuntu-20.04
+  publish-final-test-report:
+    name: Finalize tests and create reports
     needs: integration-test
+    if: always() # always run, regardless of the outcome of the last job
+    runs-on: ubuntu-20.04
+    env:
+      BRANCH: ${{ needs.integration-test.outputs.BRANCH }}
     steps:
+      - name: Check out code
+        uses: actions/checkout@v2.4.0
+
       - name: Download test reports
         uses: actions/download-artifact@v2
         with:
-          path: test-report-json
+          name: test-report
 
-      - name: Publish Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v1
+      - name: Print Test Report
+        id: print_test_report
+        run: |
+          echo "Integration Tests have finished." > final-test-report.txt
+          echo "" >> final-test-report.txt
+          # please check with output in write_test_report task roughly 50 lines above
+          echo "| Target Platform        |  Keptn Install    |  Keptn Auth  | Airgapped Images | Log Ingestion   | Log Forwarding   | Sequence States   | Sequence Timeout   | Sequence Control   | Sequence Queue   | Sequence Loop |  QG Standalone  |  Self Healing  |  Del-Assist  |  Backup-Restore  |  User-Man. Depl.  | Cont Deliv | Cont Deliv (Remote Exec) | Manage secrets | Webhook integration | Uniform Registration   |" >> final-test-report.txt
+          echo "| ---------------------- | ----------------- | ------------ | ---------------- | --------------- | ---------------- | ----------------- | ------------------ | ---------------- | ------------------ | ------------- | --------------- | -------------- | ------------ | ---------------- | ----------------- |----------- | ------------------------ | -------------- | ------------------- | ---------------------- |" >> final-test-report.txt
+          cat test-report*.txt >> final-test-report.txt
+
+          # print test report
+          REPORT=$(cat final-test-report.txt)
+          echo $REPORT
+# TODO: fix this and use the tablemark-cli for it with the json reports generated before
+
+      - name: Upload final test report as an artifact
+        if: always()
+        uses: actions/upload-artifact@v2
         with:
-          files: test-report-junit/**/*.xml
+          name: test-report
+          path: final-test-report.txt
+
+      - name: Summarize Resource Usage
+        id: print_resource_usage
+        run: |
+          echo "**Resource Limits**" > final-resource-limits.txt
+          ls -la test-resource-limits*.txt
+          cat test-resource-limits*.txt >> final-resource-limits.txt || echo "No resource reports found" >> final-resource-limits.txt
+          # Todo: some calculations should be done...
+
+      - name: Download all artifacts from last successful build of specified branch
+        uses: dawidd6/action-download-artifact@v2.16.0
+        with:
+          # Download last successful artifact from a CI build
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          workflow: CI.yml
+          run_id: ${{ needs.integration-test.outputs.ARTIFACT_RUN_ID }}
+          # directory where to extract artifacts to
+          path: ./dist
+
+      - name: Load Build-Config Environment from ./dist/build-config/build-config.env
+        id: load_build_env
+        uses: c-py/action-dotenv-to-setenv@v3
+        with:
+          env-file: ./dist/build-config/build-config.env
+
+      - name: Overwrite VERSION String for nightly builds
+        if: env.BRANCH == 'master'
+        run: |
+          # use VERSION.DATETIME for the cli version (e.g., nightly build)
+          VERSION=${VERSION}.${DATETIME}
+          # overwrite VERSION
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+
+      - name: Print Build-Config
+        run: |
+          echo VERSION=${VERSION}
+          echo BRANCH=${BRANCH}
+
+      - name: Formulate bug issue on errors
+        id: formulate_bug_issue
+        run: |
+          REPORT=$(cat final-test-report.txt)
+
+          if [[ "$REPORT" == *"failure"* ]]; then
+            echo "INTEGRATION TESTS FAILED! - Creating GH issue description now..."
+
+            # create a markdown file that contains details about the error
+            echo "---" > integration-tests-failed.md
+            echo "title: Integration tests failed" >> integration-tests-failed.md
+            echo "labels: type:critical" >> integration-tests-failed.md
+            echo "---" >> integration-tests-failed.md
+            echo "" >> integration-tests-failed.md
+            echo "* Link to run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >> integration-tests-failed.md
+
+            if [[ $GITHUB_EVENT_NAME == 'schedule' ]]; then
+              echo "* Triggered by: Scheduled build" >> integration-tests-failed.md
+            else
+              echo "* Triggered by: @$GITHUB_ACTOR" >> integration-tests-failed.md
+            fi
+
+            echo "* Branch: $BRANCH" >> integration-tests-failed.md
+            echo "* Version: $VERSION" >> integration-tests-failed.md
+            echo "* Datetime: $DATETIME" >> integration-tests-failed.md
+            echo "* Commit: $GIT_SHA" >> integration-tests-failed.md
+            echo "" >> integration-tests-failed.md
+
+            # print report but make failures bold
+            echo "${REPORT//failure/:x: **failure**}" >> integration-tests-failed.md
+
+            echo "" >> integration-tests-failed.md
+            echo "Note: This issue was auto-generated from [integration_tests.yml](.github/workflows/integration_tests.yml)" >> integration-tests-failed.md
+
+            echo "##[set-output name=INTEGRATION_TESTS_FAILED;]true"
+          else
+            echo "Integration tests passed, moving on..."
+          fi
+
+      - name: Create issue if tests failed
+        if: always() && github.event_name == 'schedule' && steps.formulate_bug_issue.outputs.INTEGRATION_TESTS_FAILED == 'true'
+        uses: JasonEtco/create-an-issue@v2.6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          filename: integration-tests-failed.md
+
+      - name: Find PR number for current build
+        id: find_pr_for_build
+        if: always()
+        uses: jwalton/gh-find-current-pr@v1.2.1
 
   #######################################################################
   # This job deploys Keptn with Keptn                                   #
