@@ -440,6 +440,10 @@ jobs:
           )
           echo "$filtered_test_report" > "${{ env.TEST_REPORT_FILENAME }}"
 
+          echo "::group::Test Report"
+          cat "${{ env.TEST_REPORT_FILENAME }}"
+          echo "::endgroup::"
+
       #######################################################################
       # TEARDOWN
       #######################################################################
@@ -549,7 +553,7 @@ jobs:
       - name: Download test reports
         uses: actions/download-artifact@v2
         with:
-          name: test-report
+          name: test-report-json
 
       - name: Print Test Report
         id: print_test_report
