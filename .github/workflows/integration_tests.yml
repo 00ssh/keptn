@@ -503,27 +503,40 @@ jobs:
           echo "write test report to $TEST_REPORT_FILENAME"
           report_template='{"test":$test_name, "outcome":$test_outcome}'
 
-          log_line1=$(jq -j -n --arg test_name "Keptn Install" --arg test_outcome "${{ steps.keptn_install.outcome }}" "$report_template")
-          log_line2=$(jq -j -n --arg test_name "Keptn Auth" --arg test_outcome "${{ steps.authenticate_keptn_cli.outcome }}" "$report_template")
-          log_line3=$(jq -j -n --arg test_name "Airgapped Images" --arg test_outcome "${{ steps.test_airgapped_images.outcome }}" "$report_template")
-          log_line4=$(jq -j -n --arg test_name "QG Standalone" --arg test_outcome "${{ steps.test_quality_gates.outcome }}" "$report_template")
-          log_line5=$(jq -j -n --arg test_name "Del-Assist" --arg test_outcome "${{ steps.test_delivery_assistant.outcome }}" "$report_template")
-          log_line6=$(jq -j -n --arg test_name "Backup-Restore" --arg test_outcome "${{ steps.test_backup_restore.outcome }}" "$report_template")
-          log_line7=$(jq -j -n --arg test_name "User-Man. Depl." --arg test_outcome "${{ steps.test_user_managed_delivery.outcome }}" "$report_template")
-          log_line8=$(jq -j -n --arg test_name "Cont Deliv" --arg test_outcome "${{ steps.test_continuous_delivery.outcome }}" "$report_template")
-          log_line9=$(jq -j -n --arg test_name "Cont Deliv (Remote Exec)" --arg test_outcome "${{ steps.test_continuous_delivery_remote_exec.outcome }}" "$report_template")
-          log_line10=$(jq -j -n --arg test_name "Uniform Registration" --arg test_outcome "${{ steps.test_uniform_registration.outcome }}" "$report_template")
+          test_names=(
+            "Keptn Install"
+            "Keptn Auth"
+            "Airgapped Images"
+            "QG Standalone"
+            "Del-Assist"
+            "Backup-Restore"
+            "User-Man. Depl."
+            "Cont Deliv"
+            "Cont Deliv (Remote Exec)"
+            "Uniform Registration"
+          )
 
-          echo "$log_line1" >> $TEST_REPORT_FILENAME
-          echo "$log_line2" >> $TEST_REPORT_FILENAME
-          echo "$log_line3" >> $TEST_REPORT_FILENAME
-          echo "$log_line4" >> $TEST_REPORT_FILENAME
-          echo "$log_line5" >> $TEST_REPORT_FILENAME
-          echo "$log_line6" >> $TEST_REPORT_FILENAME
-          echo "$log_line7" >> $TEST_REPORT_FILENAME
-          echo "$log_line8" >> $TEST_REPORT_FILENAME
-          echo "$log_line9" >> $TEST_REPORT_FILENAME
-          echo "$log_line10" >> $TEST_REPORT_FILENAME
+          test_outcomes=(
+            "${{ steps.keptn_install.outcome }}"
+            "${{ steps.authenticate_keptn_cli.outcome }}"
+            "${{ steps.test_airgapped_images.outcome }}"
+            "${{ steps.test_quality_gates.outcome }}"
+            "${{ steps.test_delivery_assistant.outcome }}"
+            "${{ steps.test_backup_restore.outcome }}"
+            "${{ steps.test_user_managed_delivery.outcome }}"
+            "${{ steps.test_continuous_delivery.outcome }}"
+            "${{ steps.test_continuous_delivery_remote_ex
+            "${{ steps.test_uniform_registration.outcome }}"
+          )
+
+          for ((i=0; i<${#test_names[@]}; i++)); do
+            test_name="${test_names[$i]}"
+            test_outcome="${test_outcomes[$i]}"
+
+            log_line=$(jq -j -n --arg test_name "$test_name" --arg test_outcome "$test_outcome" "$report_template")
+            echo "$log_line" >> "$TEST_REPORT_FILENAME"
+          done
+
           cat $TEST_REPORT_FILENAME
 
       - name: Upload JSON test report as artifact
